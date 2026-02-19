@@ -1,0 +1,24 @@
+﻿(ir-tree "ExpressionTest"
+  (ir-selector
+    (ir-sequence
+      (ir-condition
+        (ir-binary-op :lt (ir-call "this" "DistanceTo" ((ir-member-load ("Target") :type "unknown")) :type "unknown") (ir-binary-op :mul (ir-member-load ("AttackRange") :type "unknown") (ir-literal 1.5 :float))))
+      (ir-condition
+        (ir-binary-op :ne (ir-member-load ("Target") :type "unknown") (ir-literal null :null)))
+      (ir-condition
+        (ir-binary-op :eq (ir-member-load ("CurrentState") :type "unknown") (ir-literal ::AIState.Combat :enum)))
+      (ir-action "this" "Attack" ((ir-member-load ("Target") :type "unknown")) :type "Crisp.Runtime.BtStatus"))
+    (ir-sequence
+      (ir-condition
+        (ir-binary-op :gt (ir-member-load ("Target" "Health") :type "unknown") (ir-literal 0 :int)))
+      (ir-condition
+        (ir-binary-op :le (ir-binary-op :sub (ir-member-load ("MaxHealth") :type "unknown") (ir-member-load ("Health") :type "unknown")) (ir-literal 50.0 :float)))
+      (ir-action "this" "MoveTo" ((ir-member-load ("Target" "Position") :type "unknown")) :type "Crisp.Runtime.BtStatus"))
+    (ir-sequence
+      (ir-condition
+        (ir-binary-op :eq (ir-member-load ("Name") :type "unknown") (ir-literal "Guardian" :string)))
+      (ir-condition
+        (ir-binary-op :gt (ir-member-load ("Health") :type "unknown") (ir-literal -1 :int)))
+      (ir-condition
+        (ir-binary-op :eq (ir-member-load ("IsAlive") :type "unknown") (ir-literal true :bool)))
+      (ir-action "this" "Idle" () :type "Crisp.Runtime.BtStatus"))))

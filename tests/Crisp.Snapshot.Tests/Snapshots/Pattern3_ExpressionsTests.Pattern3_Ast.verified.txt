@@ -1,0 +1,47 @@
+﻿AstTree "ExpressionTest"
+  AstSelector
+    AstSequence
+      AstCheck
+        AstBinaryExpr Lt
+          AstCallExpr .DistanceTo
+            AstMemberAccessExpr .Target
+          AstBinaryExpr Mul
+            AstMemberAccessExpr .AttackRange
+            AstLiteralExpr 1.5 (Float)
+      AstCheck
+        AstBinaryExpr Ne
+          AstMemberAccessExpr .Target
+          AstLiteralExpr null (Null)
+      AstCheck
+        AstBinaryExpr Eq
+          AstMemberAccessExpr .CurrentState
+          AstLiteralExpr ::AIState.Combat (Enum)
+      AstActionCall .Attack
+        AstMemberAccessExpr .Target
+    AstSequence
+      AstCheck
+        AstBinaryExpr Gt
+          AstMemberAccessExpr .Target.Health
+          AstLiteralExpr 0 (Int)
+      AstCheck
+        AstBinaryExpr Le
+          AstBinaryExpr Sub
+            AstMemberAccessExpr .MaxHealth
+            AstMemberAccessExpr .Health
+          AstLiteralExpr 50 (Float)
+      AstActionCall .MoveTo
+        AstMemberAccessExpr .Target.Position
+    AstSequence
+      AstCheck
+        AstBinaryExpr Eq
+          AstMemberAccessExpr .Name
+          AstLiteralExpr "Guardian" (String)
+      AstCheck
+        AstBinaryExpr Gt
+          AstMemberAccessExpr .Health
+          AstLiteralExpr -1 (Int)
+      AstCheck
+        AstBinaryExpr Eq
+          AstMemberAccessExpr .IsAlive
+          AstLiteralExpr True (Bool)
+      AstActionCall .Idle

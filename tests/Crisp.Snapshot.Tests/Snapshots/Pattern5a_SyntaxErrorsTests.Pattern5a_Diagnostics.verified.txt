@@ -1,0 +1,5 @@
+﻿[BS0016] Expected 'expression', found 'SyntaxError2'
+[BS0016] Expected 'node', found '42'
+[BS0018] Unmatched '('
+[BS0018] Unmatched '('
+[BS0018] Unmatched '('

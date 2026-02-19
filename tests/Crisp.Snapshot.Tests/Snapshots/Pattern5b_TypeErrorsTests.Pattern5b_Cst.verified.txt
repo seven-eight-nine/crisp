@@ -1,0 +1,24 @@
+﻿CstProgram
+  CstTree
+    CstSelect
+      CstCheck
+        CstMemberAccess
+      CstCheck
+        CstMemberAccess
+      CstCheck
+        CstBinaryExpr
+          CstMemberAccess
+          CstStringLiteral ""hello""
+      CstCall
+        CstMemberAccess
+      CstCall
+        CstMemberAccess
+        CstMemberAccess
+      CstCheck
+        CstBinaryExpr
+          CstBinaryExpr
+            CstMemberAccess
+            CstIntLiteral "1"
+          CstIntLiteral "0"
+      CstCall
+        CstMemberAccess

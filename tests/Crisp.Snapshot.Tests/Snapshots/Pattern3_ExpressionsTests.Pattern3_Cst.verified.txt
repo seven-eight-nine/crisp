@@ -1,0 +1,52 @@
+﻿CstProgram
+  CstTree
+    CstSelect
+      CstSequence
+        CstCheck
+          CstBinaryExpr
+            CstCall
+              CstMemberAccess
+              CstMemberAccess
+            CstBinaryExpr
+              CstMemberAccess
+              CstFloatLiteral "1.5"
+        CstCheck
+          CstBinaryExpr
+            CstMemberAccess
+            CstNullLiteral "null"
+        CstCheck
+          CstBinaryExpr
+            CstMemberAccess
+            CstEnumLiteral "::AIState.Combat"
+        CstCall
+          CstMemberAccess
+          CstMemberAccess
+      CstSequence
+        CstCheck
+          CstBinaryExpr
+            CstMemberAccess
+            CstIntLiteral "0"
+        CstCheck
+          CstBinaryExpr
+            CstBinaryExpr
+              CstMemberAccess
+              CstMemberAccess
+            CstFloatLiteral "50.0"
+        CstCall
+          CstMemberAccess
+          CstMemberAccess
+      CstSequence
+        CstCheck
+          CstBinaryExpr
+            CstMemberAccess
+            CstStringLiteral ""Guardian""
+        CstCheck
+          CstBinaryExpr
+            CstMemberAccess
+            CstIntLiteral "-1"
+        CstCheck
+          CstBinaryExpr
+            CstMemberAccess
+            CstBoolLiteral "true"
+        CstCall
+          CstMemberAccess

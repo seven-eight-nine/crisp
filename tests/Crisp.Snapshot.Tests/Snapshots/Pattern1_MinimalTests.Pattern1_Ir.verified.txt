@@ -1,0 +1,7 @@
+﻿(ir-tree "SimpleCombat"
+  (ir-selector
+    (ir-sequence
+      (ir-condition
+        (ir-binary-op :lt (ir-member-load ("Health") :type "unknown") (ir-literal 30 :int)))
+      (ir-action "this" "Flee" () :type "Crisp.Runtime.BtStatus"))
+    (ir-action "this" "Patrol" () :type "Crisp.Runtime.BtStatus")))

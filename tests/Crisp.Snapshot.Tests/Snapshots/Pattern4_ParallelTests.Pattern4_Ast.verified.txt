@@ -1,0 +1,18 @@
+﻿AstTree "ParallelTest"
+  AstSequence
+    AstParallel :any
+      AstActionCall .SearchForEnemy
+      AstActionCall .ListenForSound
+      AstActionCall .CheckRadar
+    AstParallel :all
+      AstActionCall .AimAtTarget
+        AstMemberAccessExpr .Target
+      AstActionCall .ChargeWeapon
+    AstParallel :n 2
+      AstActionCall .NotifyAlly
+        AstMemberAccessExpr .Ally1
+      AstActionCall .NotifyAlly
+        AstMemberAccessExpr .Ally2
+      AstActionCall .NotifyAlly
+        AstMemberAccessExpr .Ally3
+    AstActionCall .ExecuteAttack

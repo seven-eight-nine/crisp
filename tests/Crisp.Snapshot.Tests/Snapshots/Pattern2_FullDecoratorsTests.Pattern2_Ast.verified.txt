@@ -1,0 +1,26 @@
+﻿AstTree "DecoratorShowcase"
+  AstSelector
+    AstGuard
+      AstMemberAccessExpr .IsAlive
+      AstSequence
+        AstIf
+          AstLogicExpr And
+            AstMemberAccessExpr .IsEnemyVisible
+            AstUnaryExpr Not
+              AstMemberAccessExpr .IsFleeing
+          AstTimeout 5
+            AstActionCall .Attack
+              AstMemberAccessExpr .Target
+          AstActionCall .Patrol
+        AstRepeat 3
+          AstActionCall .TauntEnemy
+        AstCooldown 2.5
+          AstActionCall .UseAbility
+        AstWhile
+          AstBinaryExpr Gt
+            AstMemberAccessExpr .Stamina
+            AstLiteralExpr 0 (Int)
+          AstActionCall .Sprint
+        AstInvert
+          AstCheck
+            AstMemberAccessExpr .IsStunned

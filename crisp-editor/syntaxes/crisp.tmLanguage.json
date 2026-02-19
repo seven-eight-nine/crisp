@@ -1,0 +1,237 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Crisp",
+  "scopeName": "source.crisp",
+  "fileTypes": [".crisp"],
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#tree-definition" },
+    { "include": "#expression" }
+  ],
+  "repository": {
+    "comment": {
+      "name": "comment.line.semicolon.crisp",
+      "match": ";;.*$"
+    },
+
+    "tree-definition": {
+      "comment": "トップレベルの tree 定義: (tree Name ...)",
+      "begin": "(\\()(tree)\\s+([A-Z][\\w]*)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.paren.open.crisp" },
+        "2": { "name": "keyword.control.tree.crisp" },
+        "3": { "name": "entity.name.type.tree.crisp" }
+      },
+      "end": "(\\))",
+      "endCaptures": {
+        "1": { "name": "punctuation.paren.close.crisp" }
+      },
+      "patterns": [
+        { "include": "#comment" },
+        { "include": "#expression" }
+      ]
+    },
+
+    "expression": {
+      "patterns": [
+        { "include": "#comment" },
+        { "include": "#string" },
+        { "include": "#number-float" },
+        { "include": "#number-int" },
+        { "include": "#boolean" },
+        { "include": "#null-literal" },
+        { "include": "#enum-literal" },
+        { "include": "#blackboard-access" },
+        { "include": "#member-access" },
+        { "include": "#keyword-arg" },
+        { "include": "#body-placeholder" },
+        { "include": "#composite-node" },
+        { "include": "#decorator-node" },
+        { "include": "#leaf-node" },
+        { "include": "#logic-operator" },
+        { "include": "#import-statement" },
+        { "include": "#defdec-definition" },
+        { "include": "#paren-expression" },
+        { "include": "#operator" },
+        { "include": "#identifier" }
+      ]
+    },
+
+    "string": {
+      "name": "string.quoted.double.crisp",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.crisp",
+          "match": "\\\\."
+        }
+      ]
+    },
+
+    "number-float": {
+      "name": "constant.numeric.float.crisp",
+      "match": "-?\\d+\\.\\d+"
+    },
+
+    "number-int": {
+      "name": "constant.numeric.integer.crisp",
+      "match": "-?\\d+"
+    },
+
+    "boolean": {
+      "name": "constant.language.boolean.crisp",
+      "match": "\\b(true|false)\\b"
+    },
+
+    "null-literal": {
+      "name": "constant.language.null.crisp",
+      "match": "\\bnull\\b"
+    },
+
+    "enum-literal": {
+      "comment": "列挙型リテラル: ::TypeName.MemberName",
+      "name": "constant.other.enum.crisp",
+      "match": "::[A-Z][\\w]*\\.[A-Z][\\w]*"
+    },
+
+    "blackboard-access": {
+      "comment": "ブラックボードアクセス (F3): $.Foo.Bar",
+      "name": "variable.other.blackboard.crisp",
+      "match": "\\$\\.[A-Z][\\w]*(\\.[A-Z][\\w]*)*"
+    },
+
+    "member-access": {
+      "comment": "メンバーアクセスチェイン: .Foo.Bar.Baz",
+      "name": "variable.other.member.crisp",
+      "match": "\\.[A-Z][\\w]*(\\.[A-Z][\\w]*)*"
+    },
+
+    "keyword-arg": {
+      "comment": "キーワード引数: :any, :all, :n",
+      "name": "constant.other.keyword-arg.crisp",
+      "match": ":[a-z][\\w-]*"
+    },
+
+    "body-placeholder": {
+      "comment": "ボディプレースホルダ (F2): <body>",
+      "name": "keyword.other.placeholder.crisp",
+      "match": "<body>"
+    },
+
+    "composite-node": {
+      "comment": "コンポジットノード: (select ...), (seq ...), (parallel ...)",
+      "begin": "(\\()(select|seq|sequence|parallel)\\b",
+      "beginCaptures": {
+        "1": { "name": "punctuation.paren.open.crisp" },
+        "2": { "name": "keyword.control.composite.crisp" }
+      },
+      "end": "(\\))",
+      "endCaptures": {
+        "1": { "name": "punctuation.paren.close.crisp" }
+      },
+      "patterns": [
+        { "include": "#expression" }
+      ]
+    },
+
+    "decorator-node": {
+      "comment": "デコレータノード: (guard ...), (if ...), (invert ...), (repeat ...), (timeout ...), (cooldown ...), (while ...), (reactive ...), (reactive-select ...)",
+      "begin": "(\\()(guard|if|invert|repeat|timeout|cooldown|while|reactive-select|reactive)\\b",
+      "beginCaptures": {
+        "1": { "name": "punctuation.paren.open.crisp" },
+        "2": { "name": "keyword.control.decorator.crisp" }
+      },
+      "end": "(\\))",
+      "endCaptures": {
+        "1": { "name": "punctuation.paren.close.crisp" }
+      },
+      "patterns": [
+        { "include": "#expression" }
+      ]
+    },
+
+    "leaf-node": {
+      "comment": "リーフノード: (check ...), (ref ...)",
+      "begin": "(\\()(check|ref)\\b",
+      "beginCaptures": {
+        "1": { "name": "punctuation.paren.open.crisp" },
+        "2": { "name": "keyword.control.leaf.crisp" }
+      },
+      "end": "(\\))",
+      "endCaptures": {
+        "1": { "name": "punctuation.paren.close.crisp" }
+      },
+      "patterns": [
+        { "include": "#expression" }
+      ]
+    },
+
+    "logic-operator": {
+      "comment": "論理演算子: and, or, not",
+      "name": "keyword.operator.logical.crisp",
+      "match": "\\b(and|or|not)\\b"
+    },
+
+    "import-statement": {
+      "comment": "インポート文: (import ...)",
+      "begin": "(\\()(import)\\b",
+      "beginCaptures": {
+        "1": { "name": "punctuation.paren.open.crisp" },
+        "2": { "name": "keyword.control.import.crisp" }
+      },
+      "end": "(\\))",
+      "endCaptures": {
+        "1": { "name": "punctuation.paren.close.crisp" }
+      },
+      "patterns": [
+        { "include": "#string" },
+        { "include": "#identifier" }
+      ]
+    },
+
+    "defdec-definition": {
+      "comment": "ユーザー定義デコレータ (F2): (defdec Name ...)",
+      "begin": "(\\()(defdec)\\s+([A-Z][\\w]*)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.paren.open.crisp" },
+        "2": { "name": "keyword.control.defdec.crisp" },
+        "3": { "name": "entity.name.function.decorator.crisp" }
+      },
+      "end": "(\\))",
+      "endCaptures": {
+        "1": { "name": "punctuation.paren.close.crisp" }
+      },
+      "patterns": [
+        { "include": "#expression" }
+      ]
+    },
+
+    "paren-expression": {
+      "comment": "一般的な括弧式: アクション呼び出し (.Method arg1 arg2) 等",
+      "begin": "(\\()",
+      "beginCaptures": {
+        "1": { "name": "punctuation.paren.open.crisp" }
+      },
+      "end": "(\\))",
+      "endCaptures": {
+        "1": { "name": "punctuation.paren.close.crisp" }
+      },
+      "patterns": [
+        { "include": "#expression" }
+      ]
+    },
+
+    "operator": {
+      "comment": "算術演算子・比較演算子: + - * / % < > <= >= = !=",
+      "name": "keyword.operator.crisp",
+      "match": "(<=|>=|!=|[+\\-*/%<>=])"
+    },
+
+    "identifier": {
+      "comment": "一般識別子",
+      "name": "variable.other.crisp",
+      "match": "[a-zA-Z_][\\w-]*"
+    }
+  }
+}

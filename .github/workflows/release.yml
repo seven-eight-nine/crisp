@@ -1,0 +1,102 @@
+name: Create Release with Claude
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+      
+      - name: Get previous tag
+        id: prev_tag
+        run: |
+          CURRENT_TAG=${GITHUB_REF#refs/tags/}
+          PREV_TAG=$(git tag --sort=-version:refname | grep -v "^${CURRENT_TAG}$" | head -n 1 || echo "")
+          echo "current=$CURRENT_TAG" >> $GITHUB_OUTPUT
+          echo "previous=$PREV_TAG" >> $GITHUB_OUTPUT
+      
+      - name: Prepare diff info
+        run: |
+          PREV_TAG="${{ steps.prev_tag.outputs.previous }}"
+          if [ -n "$PREV_TAG" ]; then
+            git fetch origin tag $PREV_TAG --no-tags 2>/dev/null || true
+            if git rev-parse "$PREV_TAG" >/dev/null 2>&1; then
+              git diff --name-status $PREV_TAG..HEAD > diff_files.txt
+              git diff --stat $PREV_TAG..HEAD > diff_stat.txt
+            else
+              echo "Previous tag not reachable" > diff_files.txt
+              echo "N/A" > diff_stat.txt
+            fi
+          else
+            echo "Initial release" > diff_files.txt
+            echo "Initial release" > diff_stat.txt
+          fi
+      
+      - name: Generate Release Notes with Claude
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          CURRENT_TAG="${{ steps.prev_tag.outputs.current }}"
+          PREV_TAG="${{ steps.prev_tag.outputs.previous }}"
+          
+          cat << 'PROMPT_END' > prompt.txt
+          あなたはリリースノートを書くテクニカルライターです。
+          このライブラリのリリースノートを日本語で作成してください。
+          
+          ## 指示
+          1. ソースコードの主要ファイルを確認
+          2. README.md があれば読む
+          3. 差分情報があれば参考にする
+          4. ユーザー向けの簡潔なリリースノートを作成
+          
+          ## フォーマット
+          - 概要（1-2行）
+          - 主な変更点（箇条書き）
+          - 破壊的変更があれば明記
+          
+          ## 禁止事項
+          - ワークフロー、CI/CD、GitHub Actions、Azure Pipeline に関する言及は一切しないこと
+          - 上記フォーマットで指定された大項目以外の内容を追加しないこと
+          - .github フォルダや設定ファイルの変更には触れないこと
+          
+          ## 出力
+          結果を release_notes.md として保存
+          PROMPT_END
+          
+          echo "バージョン: $CURRENT_TAG" >> prompt.txt
+          echo "前バージョン: ${PREV_TAG:-初回リリース}" >> prompt.txt
+          cat diff_files.txt >> prompt.txt
+          cat diff_stat.txt >> prompt.txt
+          
+          claude -p "$(cat prompt.txt)" --allowedTools "Read" "Write"
+          
+          if [ ! -f release_notes.md ]; then
+            echo "## $CURRENT_TAG" > release_notes.md
+            echo "リリースノートの自動生成に失敗しました。" >> release_notes.md
+          fi
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body_path: release_notes.md
+          draft: false

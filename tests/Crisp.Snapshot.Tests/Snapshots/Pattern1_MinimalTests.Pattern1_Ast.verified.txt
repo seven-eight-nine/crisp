@@ -1,0 +1,9 @@
+﻿AstTree "SimpleCombat"
+  AstSelector
+    AstSequence
+      AstCheck
+        AstBinaryExpr Lt
+          AstMemberAccessExpr .Health
+          AstLiteralExpr 30 (Int)
+      AstActionCall .Flee
+    AstActionCall .Patrol

@@ -1,0 +1,12 @@
+﻿AstTree "SyntaxError1"
+  AstSelector
+    AstActionCall .Patrol
+    AstSequence
+      AstCheck
+        AstBinaryExpr Lt
+          AstMemberAccessExpr .Health
+          AstLiteralExpr 30 (Int)
+      AstDefdecCall "tree"
+        AstLiteralExpr null (Null)
+        AstSelector
+          AstActionCall .Patrol

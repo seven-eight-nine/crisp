@@ -1,0 +1,12 @@
+﻿CstProgram
+  CstTree
+    CstSelect
+      CstSequence
+        CstCheck
+          CstBinaryExpr
+            CstMemberAccess
+            CstIntLiteral "30"
+        CstCall
+          CstMemberAccess
+      CstCall
+        CstMemberAccess

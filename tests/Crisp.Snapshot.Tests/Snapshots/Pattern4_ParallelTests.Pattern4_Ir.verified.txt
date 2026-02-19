@@ -1,0 +1,14 @@
+﻿(ir-tree "ParallelTest"
+  (ir-sequence
+    (ir-parallel :any
+      (ir-action "this" "SearchForEnemy" () :type "Crisp.Runtime.BtStatus")
+      (ir-action "this" "ListenForSound" () :type "Crisp.Runtime.BtStatus")
+      (ir-action "this" "CheckRadar" () :type "Crisp.Runtime.BtStatus"))
+    (ir-parallel :all
+      (ir-action "this" "AimAtTarget" ((ir-member-load ("Target") :type "unknown")) :type "Crisp.Runtime.BtStatus")
+      (ir-action "this" "ChargeWeapon" () :type "Crisp.Runtime.BtStatus"))
+    (ir-parallel :n 2
+      (ir-action "this" "NotifyAlly" ((ir-member-load ("Ally1") :type "unknown")) :type "Crisp.Runtime.BtStatus")
+      (ir-action "this" "NotifyAlly" ((ir-member-load ("Ally2") :type "unknown")) :type "Crisp.Runtime.BtStatus")
+      (ir-action "this" "NotifyAlly" ((ir-member-load ("Ally3") :type "unknown")) :type "Crisp.Runtime.BtStatus"))
+    (ir-action "this" "ExecuteAttack" () :type "Crisp.Runtime.BtStatus")))

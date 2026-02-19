@@ -1,0 +1,6 @@
+﻿[BS0001] Member 'NonExistent' not found on type 'Test.ErrorAI'
+[BS0005] Method 'Attack' expects 1 arguments, got 0
+[BS0003] Cannot compare 'float' with 'string'
+[BS0004] Arithmetic operator '+' not applicable to 'string'
+[BS0007] Expression in 'check' must be bool, got 'float'
+[BS0008] Action method 'DistanceTo' must return BtStatus

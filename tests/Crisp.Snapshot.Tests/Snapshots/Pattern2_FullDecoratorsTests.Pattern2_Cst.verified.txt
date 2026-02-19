@@ -1,0 +1,32 @@
+﻿CstProgram
+  CstTree
+    CstSelect
+      CstGuard
+        CstMemberAccess
+        CstSequence
+          CstIf
+            CstLogicExpr
+              CstMemberAccess
+              CstUnaryExpr
+                CstMemberAccess
+            CstTimeout
+              CstCall
+                CstMemberAccess
+                CstMemberAccess
+            CstCall
+              CstMemberAccess
+          CstRepeat
+            CstCall
+              CstMemberAccess
+          CstCooldown
+            CstCall
+              CstMemberAccess
+          CstWhile
+            CstBinaryExpr
+              CstMemberAccess
+              CstIntLiteral "0"
+            CstCall
+              CstMemberAccess
+          CstInvert
+            CstCheck
+              CstMemberAccess

@@ -1,0 +1,20 @@
+﻿AstTree "TypeError"
+  AstSelector
+    AstCheck
+      AstMemberAccessExpr .NonExistent
+    AstCheck
+      AstMemberAccessExpr .Health
+    AstCheck
+      AstBinaryExpr Lt
+        AstMemberAccessExpr .Health
+        AstLiteralExpr "hello" (String)
+    AstActionCall .Attack
+    AstActionCall .DistanceTo
+      AstMemberAccessExpr .Target
+    AstCheck
+      AstBinaryExpr Gt
+        AstBinaryExpr Add
+          AstMemberAccessExpr .Name
+          AstLiteralExpr 1 (Int)
+        AstLiteralExpr 0 (Int)
+    AstActionCall .Patrol

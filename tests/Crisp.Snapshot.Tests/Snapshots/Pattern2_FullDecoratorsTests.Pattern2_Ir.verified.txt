@@ -1,0 +1,20 @@
+﻿(ir-tree "DecoratorShowcase"
+  (ir-selector
+    (ir-guard
+      (ir-member-load ("IsAlive") :type "unknown")
+      (ir-sequence
+        (ir-if
+          (ir-logic-op :and (ir-member-load ("IsEnemyVisible") :type "unknown") (ir-unary-op :not (ir-member-load ("IsFleeing") :type "unknown")))
+          (ir-timeout 5.0
+            (ir-action "this" "Attack" ((ir-member-load ("Target") :type "unknown")) :type "Crisp.Runtime.BtStatus"))
+          (ir-action "this" "Patrol" () :type "Crisp.Runtime.BtStatus"))
+        (ir-repeat 3
+          (ir-action "this" "TauntEnemy" () :type "Crisp.Runtime.BtStatus"))
+        (ir-cooldown 2.5
+          (ir-action "this" "UseAbility" () :type "Crisp.Runtime.BtStatus"))
+        (ir-while
+          (ir-binary-op :gt (ir-member-load ("Stamina") :type "unknown") (ir-literal 0 :int))
+          (ir-action "this" "Sprint" () :type "Crisp.Runtime.BtStatus"))
+        (ir-invert
+          (ir-condition
+            (ir-member-load ("IsStunned") :type "unknown")))))))
