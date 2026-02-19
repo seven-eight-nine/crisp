@@ -59,7 +59,7 @@
 
 | パッケージ | ターゲット | 責務 |
 |---|---|---|
-| **Crisp.Runtime** | netstandard2.0; net8.0 | `BtNode` 基底クラス、全組み込みノード（Reactive, Async, Debug 含む）、`BtStatus`、`TickContext`、`IBtBlackboard`、`IAsyncOperation`、`IDebugSink`、AOT アクセサ、属性 |
+| **Crisp.Runtime** | netstandard2.0; net8.0 | `BtNode` 基底クラス（デバッグプロパティ含む）、全組み込みノード（Reactive, Async, Debug 含む）、`BtStatus`、`TickContext`、`IBtBlackboard`、`IAsyncOperation`、`IDebugSink`、`BtDebugger`・`BtNodeSnapshot`・`BtTreeSnapshot`・`BtDebugFormatter`、AOT アクセサ、属性 |
 | **Crisp.Syntax** | netstandard2.0; net8.0 | Lexer、Parser、CST、AST、CstToAstLowering、MacroExpander、AstDefdecExpander、AstRefResolver、IR、IrOptimizer、CSharpEmitter、Formatter、Interpreter、CrispRuntime、CompilationPipeline、PositionMapper |
 | **Crisp.Semantics** | netstandard2.0 | NameResolver（名前解決）、TypeInferer（型推論）、TypeChecker（型検査）、SemanticAnalyzer、GenericTypeResolver（ジェネリクス解決）、NullableAnalyzer（Nullable フロー解析） |
 | **Crisp.Query** | netstandard2.0 | QueryDatabase — salsa-like 増分計算エンジン、FileId |
@@ -424,10 +424,10 @@ IR から C# ソースコードを生成します。
 - コンポジットノード → `new SelectorNode(...)` / `new SequenceNode(...)` / `new ParallelNode(...)`
 - リアクティブノード → `new ReactiveNode(() => ..., ...)` / `new ReactiveSelectorNode(...)`
 - デコレータノード → `new GuardNode(() => ..., ...)` / `new IfNode(...)` 等
-- 条件 → `new ConditionNode(() => ...)`
-- 同期アクション → `new ActionNode(() => this.Method(...))`
+- 条件 → `new ConditionNode(() => ..., "debugLabel")`
+- 同期アクション → `new ActionNode(() => this.Method(...), "debugLabel")`
 - サブツリーアクション → `this.Method()`（BtNode を返すメソッドの直接呼び出し）
-- 非同期アクション → `new AsyncActionNode(ct => this.Method(ct))`
+- 非同期アクション → `new AsyncActionNode(ct => this.Method(ct), "debugLabel")`
 - デバッグラップ → `new DebugProxyNode(inner, nodeId, sink)`
 - メンバーアクセス → `this.Property` / `this.Prop.Nested`
 - ブラックボードアクセス → `__bb.Property`
@@ -562,11 +562,16 @@ Source Generator と LSP サーバーは同じ `QueryDatabase` クラスを使�
 
 ```
 BtNode (abstract)
+│  LastStatus: BtStatus?      ─ 最後の Tick 結果（デバッグ用）
+│  DebugChildren: IReadOnlyList<BtNode>  ─ 子ノード一覧（デバッグ用）
+│  DebugNodeType: string      ─ ノード種別名（デバッグ用）
+│  DebugLabel: string?        ─ 人間可読ラベル（デバッグ用）
+│
 ├── SelectorNode          ─ 子を順に評価、最初の Success/Running を返す
 ├── SequenceNode          ─ 子を順に評価、全て Success で成功
 ├── ParallelNode          ─ 全子を毎ティック評価、ポリシーで判定
-├── ConditionNode         ─ bool 式を評価
-├── ActionNode            ─ BtStatus を返すアクション実行
+├── ConditionNode         ─ bool 式を評価（debugLabel 引数対応）
+├── ActionNode            ─ BtStatus を返すアクション実行（debugLabel 引数対応）
 ├── GuardNode             ─ 条件付き実行
 ├── IfNode                ─ 条件分岐（then/else）
 ├── InvertNode            ─ 結果反転（Success ↔ Failure）
@@ -576,9 +581,39 @@ BtNode (abstract)
 ├── WhileNode             ─ 条件ループ
 ├── ReactiveNode          ─ 毎ティック条件再評価、Running 中断
 ├── ReactiveSelectorNode  ─ 毎ティック先頭から再評価、優先度切替
-├── AsyncActionNode       ─ async/await ブリッジ
-└── DebugProxyNode        ─ デバッグイベント通知ラッパー
+├── AsyncActionNode       ─ async/await ブリッジ（debugLabel 引数対応）
+└── DebugProxyNode        ─ デバッグイベント通知ラッパー（デバッグプロパティ透過）
 ```
+
+### デバッグインフラ
+
+`BtNode` の 4 つのデバッグプロパティにより、実行中のツリーを外部から非破壊的にインスペクションできます。
+
+```
+BtDebugger
+    │
+    │  Capture()
+    ▼
+BtNode.DebugChildren ──── 再帰走査 ──── BtNodeSnapshot ツリー
+    │                                        │
+    ├─ DebugNodeType ──── NodeType            │
+    ├─ DebugLabel ──────── Label              │
+    └─ LastStatus ──────── LastStatus         │
+                                              ▼
+                                    BtTreeSnapshot
+                                    │  Root: BtNodeSnapshot
+                                    │  BlackboardValues: リフレクションで読み取り
+                                    │
+                                    ▼
+                            BtDebugFormatter.Format()
+                                    │
+                                    ▼
+                            テキスト出力（ASCII ツリー図）
+```
+
+**Source Generator とのデバッグラベル連携:**
+
+CSharpEmitter は `ConditionNode`・`ActionNode`・`AsyncActionNode` の生成時に、`TreeLayoutBuilder.FormatExpr()` / `FormatAction()` で式のテキスト表現を生成し、`debugLabel` 引数として渡します。これにより、Source Generator で生成されたツリーには自動的に人間可読なラベルが付与されます。
 
 ### Tick / Reset / Abort ライフサイクル
 
@@ -707,6 +742,6 @@ IrTree "T"
 return new Crisp.Runtime.Nodes.ReactiveSelectorNode(
     new Crisp.Runtime.Nodes.GuardNode(
         () => (this.Health < 30),
-        new Crisp.Runtime.Nodes.ActionNode(() => this.Flee())),
-    new Crisp.Runtime.Nodes.ActionNode(() => this.Patrol()));
+        new Crisp.Runtime.Nodes.ActionNode(() => this.Flee(), "Flee()")),
+    new Crisp.Runtime.Nodes.ActionNode(() => this.Patrol(), "Patrol()"));
 ```

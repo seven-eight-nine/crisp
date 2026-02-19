@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Crisp.Runtime.Nodes;
 
 /// <summary>
@@ -34,6 +36,8 @@ public class ReactiveNode : BtNode
         _body = body;
     }
 
+    public override IReadOnlyList<BtNode> DebugChildren => new[] { _body };
+
     public override BtStatus Tick(TickContext ctx)
     {
         // 毎 tick 条件を再評価
@@ -45,7 +49,7 @@ public class ReactiveNode : BtNode
                 _body.Abort();
                 _bodyRunning = false;
             }
-            return BtStatus.Failure;
+            return Track(BtStatus.Failure);
         }
 
         // 条件が true → body を tick
@@ -56,7 +60,7 @@ public class ReactiveNode : BtNode
         if (status != BtStatus.Running)
             _body.Reset();
 
-        return status;
+        return Track(status);
     }
 
     /// <summary>
@@ -64,6 +68,7 @@ public class ReactiveNode : BtNode
     /// </summary>
     public override void Abort()
     {
+        LastStatus = null;
         if (_bodyRunning)
             _body.Abort();
         _bodyRunning = false;
@@ -74,6 +79,7 @@ public class ReactiveNode : BtNode
     /// </summary>
     public override void Reset()
     {
+        LastStatus = null;
         _body.Reset();
         _bodyRunning = false;
     }
@@ -110,6 +116,10 @@ public class ReactiveSelectorNode : BtNode
         _children = children;
     }
 
+    public override IReadOnlyList<BtNode> DebugChildren => _children;
+
+    public override string DebugNodeType => "reactive-select";
+
     public override BtStatus Tick(TickContext ctx)
     {
         // 毎 tick 先頭から再評価
@@ -130,7 +140,7 @@ public class ReactiveSelectorNode : BtNode
                 if (status == BtStatus.Running)
                     _runningIndices.Add(i);
 
-                return status;
+                return Track(status);
             }
         }
 
@@ -139,7 +149,7 @@ public class ReactiveSelectorNode : BtNode
             _children[ri].Abort();
         _runningIndices.Clear();
 
-        return BtStatus.Failure;
+        return Track(BtStatus.Failure);
     }
 
     /// <summary>
@@ -147,6 +157,7 @@ public class ReactiveSelectorNode : BtNode
     /// </summary>
     public override void Abort()
     {
+        LastStatus = null;
         foreach (var ri in _runningIndices)
             _children[ri].Abort();
         _runningIndices.Clear();
@@ -157,6 +168,7 @@ public class ReactiveSelectorNode : BtNode
     /// </summary>
     public override void Reset()
     {
+        LastStatus = null;
         foreach (var child in _children)
             child.Reset();
         _runningIndices.Clear();

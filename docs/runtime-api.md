@@ -17,6 +17,7 @@
 - [Blackboard](#blackboard)
 - [非同期操作 (IAsyncOperation)](#非同期操作-iasyncoperation)
 - [デバッガ (IDebugSink)](#デバッガ-idebugsink)
+- [ランタイムデバッガ (BtDebugger)](#ランタイムデバッガ-btdebugger)
 - [AOT サポート](#aot-サポート)
 - [属性](#属性)
 - [インタプリタ (Hot Reload)](#インタプリタ-hot-reload)
@@ -56,6 +57,12 @@ public abstract class BtNode
     public abstract BtStatus Tick(TickContext ctx);
     public virtual void Reset() { }
     public virtual void Abort() => Reset();
+
+    // デバッグ用プロパティ
+    public BtStatus? LastStatus { get; protected set; }
+    public virtual IReadOnlyList<BtNode> DebugChildren => Array.Empty<BtNode>();
+    public virtual string DebugNodeType => GetType().Name.Replace("Node", "").ToLowerInvariant();
+    public virtual string? DebugLabel => null;
 }
 ```
 
@@ -93,6 +100,45 @@ tree.Tick(ctx); // 最初から評価し直す
 - `timeout` ノードの時間切れ時
 
 デフォルト実装は `Reset()` に委譲します。キャンセル固有のクリーンアップ（アニメーション停止等）が必要な場合はオーバーライドしてください。
+
+### デバッグプロパティ
+
+`BtNode` は実行時のデバッグ・インスペクションのための 4 つのプロパティを提供します。`BtDebugger` によるスナップショット取得や、独自のデバッグツール構築に使用できます。
+
+| プロパティ | 型 | 説明 |
+|---|---|---|
+| `LastStatus` | `BtStatus?` | 最後の `Tick` の結果。未評価なら `null`。`Reset()` で `null` にクリアされる |
+| `DebugChildren` | `IReadOnlyList<BtNode>` | デバッグ用の子ノード一覧。リーフノードは空リストを返す |
+| `DebugNodeType` | `string` | ノード種別名（`"selector"`, `"sequence"`, `"action"` 等） |
+| `DebugLabel` | `string?` | 人間可読なラベル（`"Patrol()"`, `".Health < 30"` 等）。ラベルなしなら `null` |
+
+**`LastStatus` のライフサイクル:**
+
+```csharp
+var node = new ActionNode(() => BtStatus.Success);
+
+// 未評価 → null
+Console.WriteLine(node.LastStatus); // null
+
+// Tick 後 → 結果が記録される
+node.Tick(ctx);
+Console.WriteLine(node.LastStatus); // Success
+
+// Reset 後 → null にクリア
+node.Reset();
+Console.WriteLine(node.LastStatus); // null
+```
+
+**各ノード型の `DebugChildren`:**
+
+| ノード型 | DebugChildren |
+|---|---|
+| SelectorNode, SequenceNode, ParallelNode | 全子ノード |
+| ReactiveSelectorNode | 全子ノード |
+| GuardNode, InvertNode, RepeatNode, TimeoutNode, CooldownNode, WhileNode, ReactiveNode | 子ノード 1 つ |
+| IfNode | then + else（else がある場合） |
+| ConditionNode, ActionNode, AsyncActionNode | 空 |
+| DebugProxyNode | 内部ノードの DebugChildren を透過的に返す |
 
 ## TickContext
 
@@ -280,9 +326,11 @@ public class ReactiveSelectorNode : BtNode
 ```csharp
 public class ConditionNode : BtNode
 {
-    public ConditionNode(Func<bool> condition);
+    public ConditionNode(Func<bool> condition, string? debugLabel = null);
 }
 ```
+
+`debugLabel` は `DebugLabel` プロパティとして公開され、デバッガのスナップショットに含まれます。Source Generator は条件式のテキスト表現（例: `".Health < 30"`）を自動的に設定します。
 
 ### ActionNode
 
@@ -291,9 +339,11 @@ public class ConditionNode : BtNode
 ```csharp
 public class ActionNode : BtNode
 {
-    public ActionNode(Func<BtStatus> action);
+    public ActionNode(Func<BtStatus> action, string? debugLabel = null);
 }
 ```
+
+`debugLabel` は `DebugLabel` プロパティとして公開されます。Source Generator はメソッド名と引数のテキスト表現（例: `"Patrol()"`, `"Attack(.Target)"`）を自動的に設定します。
 
 ### サブツリー埋め込み（BtNode を返すメソッド）
 
@@ -325,10 +375,10 @@ public partial class EnemyAI
 生成コード:
 ```csharp
 // BtNode メソッド → this.BuildCombatSubtree()（直接呼び出し）
-// BtStatus メソッド → new ActionNode(() => this.Patrol())
+// BtStatus メソッド → new ActionNode(() => this.Patrol(), "Patrol()")
 return new SelectorNode(
     this.BuildCombatSubtree(),
-    new ActionNode(() => this.Patrol()));
+    new ActionNode(() => this.Patrol(), "Patrol()"));
 ```
 
 ## 非同期ノード
@@ -340,7 +390,7 @@ C# の async/await をビヘイビアツリーの tick 駆動モデルに橋渡�
 ```csharp
 public class AsyncActionNode : BtNode
 {
-    public AsyncActionNode(Func<CancellationToken, IAsyncOperation> factory);
+    public AsyncActionNode(Func<CancellationToken, IAsyncOperation> factory, string? debugLabel = null);
 }
 ```
 
@@ -493,6 +543,159 @@ var debugSink = new MyDebugSink();
 var ctx = new TickContext(DeltaTime: 0.016f, Debug: debugSink);
 tree.Tick(ctx);
 ```
+
+## ランタイムデバッガ (BtDebugger)
+
+`BtDebugger` はビヘイビアツリーの構造・実行状態・Blackboard 値のスナップショットを非破壊的に取得するデバッガです。ゲームコードから簡単にツリーの現在状態を確認できます。
+
+### BtNodeSnapshot
+
+ツリー内の 1 ノードの状態を表すスナップショットです。
+
+```csharp
+namespace Crisp.Runtime.Debug;
+
+public sealed class BtNodeSnapshot
+{
+    public string NodeType { get; }
+    public string? Label { get; }
+    public BtStatus? LastStatus { get; }
+    public IReadOnlyList<BtNodeSnapshot> Children { get; }
+}
+```
+
+| プロパティ | 説明 |
+|---|---|
+| `NodeType` | ノード種別名（`BtNode.DebugNodeType` から取得） |
+| `Label` | 人間可読なラベル（`BtNode.DebugLabel` から取得） |
+| `LastStatus` | 最後の Tick 結果。未評価なら `null` |
+| `Children` | 子ノードのスナップショット（`BtNode.DebugChildren` を再帰走査） |
+
+### BtTreeSnapshot
+
+ツリー全体と Blackboard の状態を表すスナップショットです。
+
+```csharp
+namespace Crisp.Runtime.Debug;
+
+public sealed class BtTreeSnapshot
+{
+    public BtNodeSnapshot Root { get; }
+    public IReadOnlyDictionary<string, object?>? BlackboardValues { get; }
+}
+```
+
+| プロパティ | 説明 |
+|---|---|
+| `Root` | ルートノードのスナップショット |
+| `BlackboardValues` | Blackboard の全パブリックプロパティのキー・値ペア。Blackboard 未設定の場合は `null` |
+
+### BtDebugger
+
+スナップショットを取得するデバッガ本体です。
+
+```csharp
+namespace Crisp.Runtime.Debug;
+
+public sealed class BtDebugger
+{
+    public BtDebugger(BtNode root, object? blackboard = null);
+    public BtTreeSnapshot Capture();
+}
+```
+
+**コンストラクタ引数:**
+
+| パラメータ | 説明 |
+|---|---|
+| `root` | デバッグ対象のルートノード |
+| `blackboard` | Blackboard オブジェクト（オプション）。指定するとパブリックプロパティがスナップショットに含まれる |
+
+`Capture()` は呼び出し時点のツリー状態を非破壊的にキャプチャします。`BtNode.DebugChildren` を再帰的に走査し、各ノードの `DebugNodeType`・`DebugLabel`・`LastStatus` をコピーします。Blackboard が指定されている場合はリフレクションでパブリックプロパティを読み取ります。
+
+**使用例:**
+
+```csharp
+using Crisp.Runtime.Debug;
+
+// ツリーを構築・実行
+var ai = new EnemyAI { Health = 20 };
+var tree = ai.BuildTree();
+tree.Tick(new TickContext(DeltaTime: 0.016f));
+
+// スナップショット取得
+var debugger = new BtDebugger(tree);
+var snapshot = debugger.Capture();
+
+// ノード状態を確認
+Console.WriteLine(snapshot.Root.NodeType);    // "selector"
+Console.WriteLine(snapshot.Root.LastStatus);  // Success
+Console.WriteLine(snapshot.Root.Children[0].Children[0].Label); // ".Health < 30"
+```
+
+**Blackboard 付きの使用例:**
+
+```csharp
+var blackboard = new WorldState { IsAlarmTriggered = true, GlobalThreatLevel = 0.8f };
+var debugger = new BtDebugger(tree, blackboard);
+var snapshot = debugger.Capture();
+
+// Blackboard 値を確認
+foreach (var (key, value) in snapshot.BlackboardValues!)
+{
+    Console.WriteLine($"  {key} = {value}");
+}
+// IsAlarmTriggered = True
+// GlobalThreatLevel = 0.8
+```
+
+### BtDebugFormatter
+
+スナップショットを人間可読なテキスト形式にフォーマットするユーティリティです。
+
+```csharp
+namespace Crisp.Runtime.Debug;
+
+public static class BtDebugFormatter
+{
+    public static string Format(BtTreeSnapshot snapshot);
+    public static string Format(BtNodeSnapshot node);
+}
+```
+
+**出力例:**
+
+```
+selector [Success]
++-- sequence [Success]
+|   +-- check ".Health < 30" [Success]
+|   \-- action "Flee()" [Success]
++-- sequence [-]
+|   +-- check ".IsEnemyVisible" [-]
+|   \-- action "Attack()" [-]
+\-- action "Patrol()" [-]
+
+Blackboard (WorldState):
+  IsAlarmTriggered = True
+  GlobalThreatLevel = 0.8
+```
+
+**フォーマット規則:**
+
+| 要素 | 表示 |
+|---|---|
+| ノード種別 | `selector`, `sequence`, `action` 等 |
+| ラベル | `"ラベル文字列"`（ダブルクォート囲み）。ラベルなしなら省略 |
+| 実行状態 | `[Success]`, `[Failure]`, `[Running]`, `[-]`（未評価） |
+| ツリー構造 | `+--`（中間子）、`\--`（末尾子）、`|`（継続線） |
+| Blackboard | `Blackboard (型名):` ヘッダーの後にプロパティ一覧 |
+
+**使用シーン:**
+
+- ゲーム実行中のコンソール出力で AI のデバッグ
+- テスト時のアサーション用にツリー状態をキャプチャ
+- ログファイルへの AI 状態出力
+- カスタムデバッグ UI の構築（`BtNodeSnapshot` を直接走査）
 
 ## AOT サポート
 

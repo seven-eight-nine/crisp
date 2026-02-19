@@ -352,7 +352,7 @@ public class BlackboardTests
         var result = CSharpEmitter.EmitExpression(node);
 
         // Assert
-        Assert.Equal("new ConditionNode(() => blackboard.IsAlarmTriggered)", result);
+        Assert.Equal("new ConditionNode(() => blackboard.IsAlarmTriggered, \"$.IsAlarmTriggered\")", result);
     }
 
     // ===============================================

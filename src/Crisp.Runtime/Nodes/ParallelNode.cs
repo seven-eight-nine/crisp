@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Crisp.Runtime.Nodes;
 
 /// <summary>
@@ -22,6 +24,8 @@ public class ParallelNode : BtNode
         _policy = policy;
         _children = children;
     }
+
+    public override IReadOnlyList<BtNode> DebugChildren => _children;
 
     public override BtStatus Tick(TickContext ctx)
     {
@@ -66,11 +70,12 @@ public class ParallelNode : BtNode
                 child.Reset();
         }
 
-        return result;
+        return Track(result);
     }
 
     public override void Reset()
     {
+        LastStatus = null;
         foreach (var child in _children) child.Reset();
     }
 }

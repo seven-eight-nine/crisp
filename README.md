@@ -20,7 +20,7 @@ Crisp は、S 式（Lisp 風）の簡潔な構文でビヘイビアツリーを�
 - **Typed Blackboard** — `$` プレフィクスで Context 外の共有データストアに型安全にアクセス
 - **非同期アクション** — `IAsyncOperation` で C# の async/await をビヘイビアツリーに統合
 - **ホットリロード** — 実行中に `.crisp` を変更し、ゲームを再起動せずに AI を調整
-- **デバッガ** — `IDebugSink` によるブレークポイント、ステップ実行、ノードトレース
+- **デバッガ** — `BtDebugger` によるツリー構造・実行状態・Blackboard のスナップショット取得。`IDebugSink` によるブレークポイント、ステップ実行、ノードトレース
 - **IR 最適化** — 定数畳み込み、到達不能ノード除去、単一子畳み込み、型変換統合
 - **AOT 対応** — NativeAOT / IL2CPP 環境でリフレクション不要の Source-Generated Accessor
 - **ジェネリクス対応** — ジェネリック型引数を持つコンテキスト型に対応
@@ -131,6 +131,38 @@ public partial BtNode BuildTree();
       (.Attack))
     ;; デフォルト: パトロール
     (.Patrol)))
+```
+
+### デバッガで実行状態を確認
+
+```csharp
+using Crisp.Runtime.Debug;
+
+var ai = new EnemyAI { Health = 20, IsEnemyVisible = true };
+var tree = ai.BuildTree();
+
+// ツリーを実行
+tree.Tick(new TickContext(DeltaTime: 0.016f));
+
+// スナップショットを取得
+var debugger = new BtDebugger(tree);
+var snapshot = debugger.Capture();
+
+// テキスト形式で出力
+Console.WriteLine(BtDebugFormatter.Format(snapshot));
+```
+
+出力例:
+
+```
+selector [Success]
++-- sequence [Success]
+|   +-- check ".Health < 30" [Success]
+|   \-- action "Flee()" [Success]
++-- sequence [-]
+|   +-- check ".IsEnemyVisible" [-]
+|   \-- action "Attack()" [-]
+\-- action "Patrol()" [-]
 ```
 
 ## DSL 構文例

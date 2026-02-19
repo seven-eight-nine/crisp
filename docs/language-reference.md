@@ -490,7 +490,7 @@ else 節を省略した場合、条件が `false` のとき Failure を返しま
 毎 tick 呼び出されるラムダとしてラップされます。実行時にメソッドを評価し、その結果（Success / Failure / Running）がそのままノードの結果となります。
 
 ```csharp
-// 生成コード: new ActionNode(() => this.Patrol())
+// 生成コード: new ActionNode(() => this.Patrol(), "Patrol()")
 public BtStatus Patrol() => BtStatus.Success;
 ```
 
@@ -549,7 +549,7 @@ partial class MyAI
         return new SelectorNode(
             BuildCombatBehavior(),
             BuildPatrolBehavior(),
-            new ActionNode(() => this.Idle()));
+            new ActionNode(() => this.Idle(), "Idle()"));
     }
 }
 ```
@@ -766,8 +766,8 @@ public partial BtNode BuildTeamAI(WorldState blackboard)
 {
     return new SelectorNode(
         new SequenceNode(
-            new ConditionNode(() => blackboard.IsAlarmTriggered),
-            new ActionNode(() => this.AlertAllies())),
+            new ConditionNode(() => blackboard.IsAlarmTriggered, "$.IsAlarmTriggered"),
+            new ActionNode(() => this.AlertAllies(), "AlertAllies()")),
         ...);
 }
 ```

@@ -206,9 +206,9 @@ partial class EnemyAI
     {
         return new Crisp.Runtime.Nodes.SelectorNode(
             new Crisp.Runtime.Nodes.SequenceNode(
-                new Crisp.Runtime.Nodes.ConditionNode(() => (this.Health < 30)),
-                new Crisp.Runtime.Nodes.ActionNode(() => this.Flee())),
-            new Crisp.Runtime.Nodes.ActionNode(() => this.Patrol()));
+                new Crisp.Runtime.Nodes.ConditionNode(() => (this.Health < 30), ".Health < 30"),
+                new Crisp.Runtime.Nodes.ActionNode(() => this.Flee(), "Flee()")),
+            new Crisp.Runtime.Nodes.ActionNode(() => this.Patrol(), "Patrol()"));
     }
 }
 ```
@@ -237,8 +237,8 @@ public partial class EnemyAI
 public partial Crisp.Runtime.BtNode BuildTree()
 {
     return new Crisp.Runtime.Nodes.SelectorNode(
-        this.BuildCombat(),                                    // BtNode → 直接呼び出し
-        new Crisp.Runtime.Nodes.ActionNode(() => this.Patrol())); // BtStatus → ActionNode ラップ
+        this.BuildCombat(),                                                // BtNode → 直接呼び出し
+        new Crisp.Runtime.Nodes.ActionNode(() => this.Patrol(), "Patrol()")); // BtStatus → ActionNode ラップ
 }
 ```
 
@@ -246,12 +246,30 @@ public partial Crisp.Runtime.BtNode BuildTree()
 
 - `this.` を通じてコンテキストクラスのメンバーを直接参照
 - ラムダ式でプロパティアクセスやメソッド呼び出しをラップ
-- `BtStatus` を返すメソッドは `ActionNode(() => ...)` でラップ
+- `BtStatus` を返すメソッドは `ActionNode(() => ..., "ラベル")` でラップ
 - `BtNode` を返すメソッドは `this.Method()` として直接呼び出し（サブツリー埋め込み）
 - 完全修飾名を使用（名前衝突を防止）
 - マルチツリーの `ref` は別メソッド呼び出しとして展開
 - リアクティブノードは `ReactiveNode` / `ReactiveSelectorNode` に変換
 - 非同期アクションは `AsyncActionNode` に変換
+- デバッグラベルの自動生成（下記参照）
+
+### デバッグラベル生成
+
+Source Generator は `ConditionNode`・`ActionNode`・`AsyncActionNode` の生成時に、DSL の式をテキスト表現に変換した文字列を `debugLabel` 引数として付与します。このラベルは `BtDebugger` のスナップショットや `BtDebugFormatter` の出力に使用されます。
+
+| ノード型 | DSL | 生成されるラベル |
+|---|---|---|
+| ConditionNode | `(check (< .Health 30))` | `".Health < 30"` |
+| ConditionNode | `(check .IsEnemyVisible)` | `".IsEnemyVisible"` |
+| ConditionNode | `(check (and .A .B))` | `".A and .B"` |
+| ActionNode | `(.Patrol)` | `"Patrol()"` |
+| ActionNode | `(.Attack .Target)` | `"Attack(.Target)"` |
+| AsyncActionNode | `(.NavigateTo)` | `"NavigateTo()"` |
+
+`BtNode` を返すサブツリーメソッドの場合は `ActionNode` でラップされないため、デバッグラベルは付与されません。サブツリー内のノードは、そのサブツリーを構築する C# コード側で個別にラベルを設定できます。
+
+ラベルの生成には `TreeLayoutBuilder.FormatExpr()` / `FormatAction()` が使用され、ビジュアルエディタのノードラベルと同じ文字列が生成されます。
 
 ## AOT アクセサの生成
 

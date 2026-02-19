@@ -310,7 +310,7 @@ public class ReactiveTests
 
         // Assert
         Assert.Equal(
-            "new ReactiveNode(() => this.IsReady, new ActionNode(() => this.Attack()))",
+            "new ReactiveNode(() => this.IsReady, new ActionNode(() => this.Attack(), \"Attack()\"))",
             result);
     }
 
@@ -322,7 +322,7 @@ public class ReactiveTests
         var result = CSharpEmitter.EmitExpression(node);
 
         Assert.Equal(
-            "new ReactiveNode(() => this.Target.IsAlive, new ActionNode(() => this.Attack()))",
+            "new ReactiveNode(() => this.Target.IsAlive, new ActionNode(() => this.Attack(), \"Attack()\"))",
             result);
     }
 
@@ -338,8 +338,8 @@ public class ReactiveTests
 
         // Assert
         Assert.Contains("new ReactiveSelectorNode(", result);
-        Assert.Contains("new ActionNode(() => this.A())", result);
-        Assert.Contains("new ActionNode(() => this.B())", result);
+        Assert.Contains("new ActionNode(() => this.A(), \"A()\")", result);
+        Assert.Contains("new ActionNode(() => this.B(), \"B()\")", result);
     }
 
     // ═══════════════════════════════════════════════

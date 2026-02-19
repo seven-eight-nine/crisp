@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Crisp.Runtime.Nodes;
 
 /// <summary>
@@ -17,6 +19,8 @@ public class SequenceNode : BtNode
         _children = children;
     }
 
+    public override IReadOnlyList<BtNode> DebugChildren => _children;
+
     public override BtStatus Tick(TickContext ctx)
     {
         var start = _runningIndex >= 0 ? _runningIndex : 0;
@@ -27,19 +31,20 @@ public class SequenceNode : BtNode
             {
                 case BtStatus.Failure:
                     _runningIndex = -1;
-                    return BtStatus.Failure;
+                    return Track(BtStatus.Failure);
                 case BtStatus.Running:
                     _runningIndex = i;
-                    return BtStatus.Running;
+                    return Track(BtStatus.Running);
                 // Success → 次の子へ
             }
         }
         _runningIndex = -1;
-        return BtStatus.Success;
+        return Track(BtStatus.Success);
     }
 
     public override void Reset()
     {
+        LastStatus = null;
         _runningIndex = -1;
         foreach (var child in _children) child.Reset();
     }

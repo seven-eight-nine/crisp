@@ -38,10 +38,16 @@ public class AsyncActionNode : BtNode
     /// <see cref="CancellationToken"/> を受け取り <see cref="IAsyncOperation"/> を返すファクトリ。
     /// 各実行サイクルの開始時に呼び出される。
     /// </param>
-    public AsyncActionNode(Func<CancellationToken, IAsyncOperation> factory)
+    /// <param name="debugLabel">デバッグ用の表示ラベル。</param>
+    public AsyncActionNode(Func<CancellationToken, IAsyncOperation> factory, string? debugLabel = null)
     {
         _factory = factory ?? throw new ArgumentNullException(nameof(factory));
+        DebugLabel = debugLabel;
     }
+
+    public override string DebugNodeType => "async-action";
+
+    public override string? DebugLabel { get; }
 
     /// <summary>
     /// 非同期アクションを tick する。
@@ -64,10 +70,10 @@ public class AsyncActionNode : BtNode
         {
             var result = _current.GetResult();
             CleanUp();
-            return result;
+            return Track(result);
         }
 
-        return BtStatus.Running;
+        return Track(BtStatus.Running);
     }
 
     /// <summary>
@@ -78,6 +84,7 @@ public class AsyncActionNode : BtNode
     /// </summary>
     public override void Abort()
     {
+        LastStatus = null;
         if (_current != null)
         {
             _cts?.Cancel();
@@ -92,6 +99,7 @@ public class AsyncActionNode : BtNode
     /// </summary>
     public override void Reset()
     {
+        LastStatus = null;
         if (_current != null)
         {
             _cts?.Cancel();

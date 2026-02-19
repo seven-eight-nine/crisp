@@ -238,7 +238,7 @@ public class MultiTreeTests
 
         // Assert
         Assert.Contains("BuildCombat()", result);
-        Assert.Contains("new ActionNode(() => this.Patrol())", result);
+        Assert.Contains("new ActionNode(() => this.Patrol(), \"Patrol()\")", result);
         Assert.Contains("new SequenceNode(", result);
     }
 
@@ -426,7 +426,7 @@ public class MultiTreeTests
 
         // Assert
         Assert.Contains("BuildCombat()", code);
-        Assert.Contains("new ActionNode(() => this.Patrol())", code);
+        Assert.Contains("new ActionNode(() => this.Patrol(), \"Patrol()\")", code);
     }
 
     [Fact]

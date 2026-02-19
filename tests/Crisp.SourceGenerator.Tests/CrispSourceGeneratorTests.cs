@@ -935,6 +935,6 @@ public partial class SubtreeAI
         Assert.Contains("this.BuildCombat()", generatedSource);
         Assert.DoesNotContain("new ActionNode(() => this.BuildCombat())", generatedSource);
         // BtStatus 戻りは通常の ActionNode ラッパー
-        Assert.Contains("new ActionNode(() => this.Patrol())", generatedSource);
+        Assert.Contains("new ActionNode(() => this.Patrol(), \"Patrol()\")", generatedSource);
     }
 }

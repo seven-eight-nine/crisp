@@ -72,8 +72,8 @@ public class EmitterTests
         // Act
         var result = CSharpEmitter.EmitExpression(node);
 
-        // Assert: this.Patrol() をラムダでラップした ActionNode 構築式
-        Assert.Equal("new ActionNode(() => this.Patrol())", result);
+        // Assert: this.Patrol() をラムダでラップした ActionNode 構築式（debugLabel 付き）
+        Assert.Equal("new ActionNode(() => this.Patrol(), \"Patrol()\")", result);
     }
 
     [Fact]
@@ -85,8 +85,8 @@ public class EmitterTests
         // Act
         var result = CSharpEmitter.EmitExpression(node);
 
-        // Assert: 引数付きの ActionNode 構築式
-        Assert.Equal("new ActionNode(() => this.Attack(this.Target))", result);
+        // Assert: 引数付きの ActionNode 構築式（debugLabel 付き）
+        Assert.Equal("new ActionNode(() => this.Attack(this.Target), \"Attack(.Target)\")", result);
     }
 
     // =================================================================
@@ -102,8 +102,8 @@ public class EmitterTests
         // Act
         var result = CSharpEmitter.EmitExpression(node);
 
-        // Assert: bool ラムダでラップされた ConditionNode
-        Assert.Equal("new ConditionNode(() => this.IsAlive)", result);
+        // Assert: bool ラムダでラップされた ConditionNode（debugLabel 付き）
+        Assert.Equal("new ConditionNode(() => this.IsAlive, \".IsAlive\")", result);
     }
 
     [Fact]
@@ -116,7 +116,7 @@ public class EmitterTests
         var result = CSharpEmitter.EmitExpression(node);
 
         // Assert: チェーンされたメンバーアクセスが正しく連結される
-        Assert.Equal("new ConditionNode(() => this.Target.IsAlive)", result);
+        Assert.Equal("new ConditionNode(() => this.Target.IsAlive, \".Target.IsAlive\")", result);
     }
 
     // =================================================================
@@ -136,8 +136,8 @@ public class EmitterTests
 
         // Assert: 複数子は改行・インデント付きで出力される
         Assert.Contains("new SelectorNode(", result);
-        Assert.Contains("new ActionNode(() => this.Flee())", result);
-        Assert.Contains("new ActionNode(() => this.Patrol())", result);
+        Assert.Contains("new ActionNode(() => this.Flee(), \"Flee()\")", result);
+        Assert.Contains("new ActionNode(() => this.Patrol(), \"Patrol()\")", result);
     }
 
     [Fact]
@@ -153,8 +153,8 @@ public class EmitterTests
 
         // Assert: SequenceNode として出力される
         Assert.Contains("new SequenceNode(", result);
-        Assert.Contains("new ConditionNode(() => this.IsAlive)", result);
-        Assert.Contains("new ActionNode(() => this.Patrol())", result);
+        Assert.Contains("new ConditionNode(() => this.IsAlive, \".IsAlive\")", result);
+        Assert.Contains("new ActionNode(() => this.Patrol(), \"Patrol()\")", result);
     }
 
     // =================================================================
@@ -400,7 +400,7 @@ public class EmitterTests
 
         var result = CSharpEmitter.EmitExpression(node);
 
-        Assert.Equal("new InvertNode(new ActionNode(() => this.Patrol()))", result);
+        Assert.Equal("new InvertNode(new ActionNode(() => this.Patrol(), \"Patrol()\"))", result);
     }
 
     [Fact]
@@ -410,7 +410,7 @@ public class EmitterTests
 
         var result = CSharpEmitter.EmitExpression(node);
 
-        Assert.Equal("new RepeatNode(3, new ActionNode(() => this.Attack()))", result);
+        Assert.Equal("new RepeatNode(3, new ActionNode(() => this.Attack(), \"Attack()\"))", result);
     }
 
     [Fact]
@@ -420,7 +420,7 @@ public class EmitterTests
 
         var result = CSharpEmitter.EmitExpression(node);
 
-        Assert.Equal("new TimeoutNode(2.5f, new ActionNode(() => this.Search()))", result);
+        Assert.Equal("new TimeoutNode(2.5f, new ActionNode(() => this.Search(), \"Search()\"))", result);
     }
 
     [Fact]
@@ -430,7 +430,7 @@ public class EmitterTests
 
         var result = CSharpEmitter.EmitExpression(node);
 
-        Assert.Equal("new CooldownNode(5f, new ActionNode(() => this.HealSelf()))", result);
+        Assert.Equal("new CooldownNode(5f, new ActionNode(() => this.HealSelf(), \"HealSelf()\"))", result);
     }
 
     [Fact]
@@ -440,7 +440,7 @@ public class EmitterTests
 
         var result = CSharpEmitter.EmitExpression(node);
 
-        Assert.Equal("new GuardNode(() => this.IsAlive, new ActionNode(() => this.Patrol()))", result);
+        Assert.Equal("new GuardNode(() => this.IsAlive, new ActionNode(() => this.Patrol(), \"Patrol()\"))", result);
     }
 
     [Fact]
@@ -450,7 +450,7 @@ public class EmitterTests
 
         var result = CSharpEmitter.EmitExpression(node);
 
-        Assert.Equal("new WhileNode(() => this.HasEnemy, new ActionNode(() => this.Attack()))", result);
+        Assert.Equal("new WhileNode(() => this.HasEnemy, new ActionNode(() => this.Attack(), \"Attack()\"))", result);
     }
 
     // =================================================================
@@ -464,7 +464,7 @@ public class EmitterTests
 
         var result = CSharpEmitter.EmitExpression(node);
 
-        Assert.Equal("new IfNode(() => this.IsAlive, new ActionNode(() => this.Patrol()))", result);
+        Assert.Equal("new IfNode(() => this.IsAlive, new ActionNode(() => this.Patrol(), \"Patrol()\"))", result);
     }
 
     [Fact]
@@ -475,7 +475,7 @@ public class EmitterTests
         var result = CSharpEmitter.EmitExpression(node);
 
         Assert.Equal(
-            "new IfNode(() => this.IsAlive, new ActionNode(() => this.Patrol()), new ActionNode(() => this.Respawn()))",
+            "new IfNode(() => this.IsAlive, new ActionNode(() => this.Patrol(), \"Patrol()\"), new ActionNode(() => this.Respawn(), \"Respawn()\"))",
             result);
     }
 
@@ -493,8 +493,8 @@ public class EmitterTests
         var result = CSharpEmitter.EmitExpression(node);
 
         Assert.Contains("new ParallelNode(new Crisp.Runtime.ParallelPolicy.Any()", result);
-        Assert.Contains("new ActionNode(() => this.A())", result);
-        Assert.Contains("new ActionNode(() => this.B())", result);
+        Assert.Contains("new ActionNode(() => this.A(), \"A()\")", result);
+        Assert.Contains("new ActionNode(() => this.B(), \"B()\")", result);
     }
 
     [Fact]
@@ -555,8 +555,8 @@ public class EmitterTests
 
         // Assert: return 文内にノード構築式が含まれる
         Assert.Contains("return new SelectorNode(", result);
-        Assert.Contains("new ActionNode(() => this.Flee())", result);
-        Assert.Contains("new ActionNode(() => this.Patrol())", result);
+        Assert.Contains("new ActionNode(() => this.Flee(), \"Flee()\")", result);
+        Assert.Contains("new ActionNode(() => this.Patrol(), \"Patrol()\")", result);
     }
 
     [Fact]
@@ -570,7 +570,7 @@ public class EmitterTests
         var result = CSharpEmitter.Emit(tree, "Game", "Agent", "Build");
 
         // Assert: SequenceNode でラップされず、直接 ActionNode が返される
-        Assert.Contains("return new ActionNode(() => this.Patrol());", result);
+        Assert.Contains("return new ActionNode(() => this.Patrol(), \"Patrol()\");", result);
         Assert.DoesNotContain("SequenceNode", result);
     }
 
@@ -605,9 +605,9 @@ public class EmitterTests
         // Assert: 全体構造が含まれる
         Assert.Contains("new SelectorNode(", result);
         Assert.Contains("new SequenceNode(", result);
-        Assert.Contains("new ConditionNode(() => (this.Health < 30))", result);
-        Assert.Contains("new ActionNode(() => this.Flee())", result);
-        Assert.Contains("new ActionNode(() => this.Patrol())", result);
+        Assert.Contains("new ConditionNode(() => (this.Health < 30), \".Health < 30\")", result);
+        Assert.Contains("new ActionNode(() => this.Flee(), \"Flee()\")", result);
+        Assert.Contains("new ActionNode(() => this.Patrol(), \"Patrol()\")", result);
     }
 
     [Fact]
@@ -629,7 +629,7 @@ public class EmitterTests
         Assert.Contains("new InvertNode(", result);
         Assert.Contains("new RepeatNode(3, ", result);
         Assert.Contains("new TimeoutNode(5f, ", result);
-        Assert.Contains("new ActionNode(() => this.Search())", result);
+        Assert.Contains("new ActionNode(() => this.Search(), \"Search()\")", result);
     }
 
     // =================================================================

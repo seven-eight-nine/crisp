@@ -8,10 +8,17 @@ public class ConditionNode : BtNode
 {
     private readonly Func<bool> _condition;
 
-    public ConditionNode(Func<bool> condition) => _condition = condition;
+    public ConditionNode(Func<bool> condition, string? debugLabel = null)
+    {
+        _condition = condition;
+        DebugLabel = debugLabel;
+    }
+
+    public override string DebugNodeType => "check";
+    public override string? DebugLabel { get; }
 
     public override BtStatus Tick(TickContext ctx) =>
-        _condition() ? BtStatus.Success : BtStatus.Failure;
+        Track(_condition() ? BtStatus.Success : BtStatus.Failure);
 }
 
 /// <summary>
@@ -22,7 +29,13 @@ public class ActionNode : BtNode
 {
     private readonly Func<BtStatus> _action;
 
-    public ActionNode(Func<BtStatus> action) => _action = action;
+    public ActionNode(Func<BtStatus> action, string? debugLabel = null)
+    {
+        _action = action;
+        DebugLabel = debugLabel;
+    }
 
-    public override BtStatus Tick(TickContext ctx) => _action();
+    public override string? DebugLabel { get; }
+
+    public override BtStatus Tick(TickContext ctx) => Track(_action());
 }

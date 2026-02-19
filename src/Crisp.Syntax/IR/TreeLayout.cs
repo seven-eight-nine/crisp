@@ -170,7 +170,7 @@ public static class TreeLayoutBuilder
     /// アクションノードのラベルを生成する。
     /// メソッド名と引数を「Method(arg1, arg2)」形式で表示する。
     /// </summary>
-    private static string FormatAction(IrAction act)
+    internal static string FormatAction(IrAction act)
     {
         var sb = new StringBuilder();
         sb.Append(act.Method.Name);
@@ -216,6 +216,7 @@ public static class TreeLayoutBuilder
             LiteralKind.Null => "null",
             LiteralKind.Bool => lit.Value is true ? "true" : "false",
             LiteralKind.String => $"\"{lit.Value}\"",
+            LiteralKind.Enum when lit.Value is EnumRef e => $"{e.TypeName}.{e.MemberName}",
             _ => lit.Value?.ToString() ?? "null",
         };
 

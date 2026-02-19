@@ -144,7 +144,9 @@ public static class CSharpEmitter
             case IrCondition cond:
                 sb.Append($"new ConditionNode(() => ");
                 EmitExpr(sb, cond.Expr);
-                sb.Append(')');
+                sb.Append(", \"");
+                sb.Append(EscapeString(TreeLayoutBuilder.FormatExpr(cond.Expr)));
+                sb.Append("\")");
                 break;
 
             case IrAction act:
@@ -159,6 +161,7 @@ public static class CSharpEmitter
                 }
                 else if (act.IsAsync)
                 {
+                    var asyncLabel = EscapeString(TreeLayoutBuilder.FormatAction(act));
                     sb.Append($"new AsyncActionNode(ct => this.");
                     sb.Append(act.Method.Name);
                     sb.Append("(ct");
@@ -167,15 +170,20 @@ public static class CSharpEmitter
                         sb.Append(", ");
                         EmitArgList(sb, act.Args);
                     }
-                    sb.Append("))");
+                    sb.Append("), \"");
+                    sb.Append(asyncLabel);
+                    sb.Append("\")");
                 }
                 else
                 {
+                    var actionLabel = EscapeString(TreeLayoutBuilder.FormatAction(act));
                     sb.Append($"new ActionNode(() => this.");
                     sb.Append(act.Method.Name);
                     sb.Append('(');
                     EmitArgList(sb, act.Args);
-                    sb.Append("))");
+                    sb.Append("), \"");
+                    sb.Append(actionLabel);
+                    sb.Append("\")");
                 }
                 break;
 

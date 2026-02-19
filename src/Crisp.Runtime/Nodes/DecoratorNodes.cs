@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Crisp.Runtime.Nodes;
 
 /// <summary>
@@ -14,10 +16,16 @@ public class GuardNode : BtNode
         _child = child;
     }
 
-    public override BtStatus Tick(TickContext ctx) =>
-        _condition() ? _child.Tick(ctx) : BtStatus.Failure;
+    public override IReadOnlyList<BtNode> DebugChildren => new[] { _child };
 
-    public override void Reset() => _child.Reset();
+    public override BtStatus Tick(TickContext ctx) =>
+        Track(_condition() ? _child.Tick(ctx) : BtStatus.Failure);
+
+    public override void Reset()
+    {
+        LastStatus = null;
+        _child.Reset();
+    }
 }
 
 /// <summary>
@@ -36,11 +44,15 @@ public class IfNode : BtNode
         _else = @else;
     }
 
+    public override IReadOnlyList<BtNode> DebugChildren =>
+        _else != null ? new BtNode[] { _then, _else } : new BtNode[] { _then };
+
     public override BtStatus Tick(TickContext ctx) =>
-        _condition() ? _then.Tick(ctx) : (_else?.Tick(ctx) ?? BtStatus.Failure);
+        Track(_condition() ? _then.Tick(ctx) : (_else?.Tick(ctx) ?? BtStatus.Failure));
 
     public override void Reset()
     {
+        LastStatus = null;
         _then.Reset();
         _else?.Reset();
     }
@@ -55,14 +67,20 @@ public class InvertNode : BtNode
 
     public InvertNode(BtNode child) => _child = child;
 
-    public override BtStatus Tick(TickContext ctx) => _child.Tick(ctx) switch
+    public override IReadOnlyList<BtNode> DebugChildren => new[] { _child };
+
+    public override BtStatus Tick(TickContext ctx) => Track(_child.Tick(ctx) switch
     {
         BtStatus.Success => BtStatus.Failure,
         BtStatus.Failure => BtStatus.Success,
         var s => s, // Running はそのまま
-    };
+    });
 
-    public override void Reset() => _child.Reset();
+    public override void Reset()
+    {
+        LastStatus = null;
+        _child.Reset();
+    }
 }
 
 /// <summary>
@@ -82,21 +100,24 @@ public class RepeatNode : BtNode
         _child = child;
     }
 
+    public override IReadOnlyList<BtNode> DebugChildren => new[] { _child };
+
     public override BtStatus Tick(TickContext ctx)
     {
         while (_current < _count)
         {
             var status = _child.Tick(ctx);
-            if (status == BtStatus.Running) return BtStatus.Running;
-            if (status == BtStatus.Failure) { Reset(); return BtStatus.Failure; }
+            if (status == BtStatus.Running) return Track(BtStatus.Running);
+            if (status == BtStatus.Failure) { Reset(); return Track(BtStatus.Failure); }
             _current++;
         }
         Reset();
-        return BtStatus.Success;
+        return Track(BtStatus.Success);
     }
 
     public override void Reset()
     {
+        LastStatus = null;
         _current = 0;
         _child.Reset();
     }
@@ -118,22 +139,25 @@ public class TimeoutNode : BtNode
         _child = child;
     }
 
+    public override IReadOnlyList<BtNode> DebugChildren => new[] { _child };
+
     public override BtStatus Tick(TickContext ctx)
     {
         _elapsed += ctx.DeltaTime;
         if (_elapsed >= _seconds)
         {
             Reset();
-            return BtStatus.Failure;
+            return Track(BtStatus.Failure);
         }
         var status = _child.Tick(ctx);
         if (status != BtStatus.Running)
             Reset();
-        return status;
+        return Track(status);
     }
 
     public override void Reset()
     {
+        LastStatus = null;
         _elapsed = 0;
         _child.Reset();
     }
@@ -155,17 +179,20 @@ public class CooldownNode : BtNode
         _child = child;
     }
 
+    public override IReadOnlyList<BtNode> DebugChildren => new[] { _child };
+
     public override BtStatus Tick(TickContext ctx)
     {
         _remaining -= ctx.DeltaTime;
-        if (_remaining > 0) return BtStatus.Failure;
+        if (_remaining > 0) return Track(BtStatus.Failure);
         var status = _child.Tick(ctx);
         if (status == BtStatus.Success) _remaining = _seconds;
-        return status;
+        return Track(status);
     }
 
     public override void Reset()
     {
+        LastStatus = null;
         _remaining = 0;
         _child.Reset();
     }
@@ -186,11 +213,17 @@ public class WhileNode : BtNode
         _body = body;
     }
 
+    public override IReadOnlyList<BtNode> DebugChildren => new[] { _body };
+
     public override BtStatus Tick(TickContext ctx)
     {
-        if (!_condition()) return BtStatus.Failure;
-        return _body.Tick(ctx);
+        if (!_condition()) return Track(BtStatus.Failure);
+        return Track(_body.Tick(ctx));
     }
 
-    public override void Reset() => _body.Reset();
+    public override void Reset()
+    {
+        LastStatus = null;
+        _body.Reset();
+    }
 }

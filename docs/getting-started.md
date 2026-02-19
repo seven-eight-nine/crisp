@@ -13,6 +13,7 @@
 - [チュートリアル 5: ブラックボード](#チュートリアル-5-ブラックボード)
 - [チュートリアル 6: defdec でカスタムノードを定義する](#チュートリアル-6-defdec-でカスタムノードを定義する)
 - [チュートリアル 7: 非同期アクション](#チュートリアル-7-非同期アクション)
+- [チュートリアル 8: デバッガ](#チュートリアル-8-デバッガ)
 - [外部ファイルの使い方](#外部ファイルの使い方)
 - [マルチツリー](#マルチツリー)
 - [ホットリロード](#ホットリロード)
@@ -149,12 +150,12 @@ partial class EnemyAI
     {
         return new Crisp.Runtime.Nodes.SelectorNode(
             new Crisp.Runtime.Nodes.SequenceNode(
-                new Crisp.Runtime.Nodes.ConditionNode(() => (this.Health < 30)),
-                new Crisp.Runtime.Nodes.ActionNode(() => this.Flee())),
+                new Crisp.Runtime.Nodes.ConditionNode(() => (this.Health < 30), ".Health < 30"),
+                new Crisp.Runtime.Nodes.ActionNode(() => this.Flee(), "Flee()")),
             new Crisp.Runtime.Nodes.SequenceNode(
-                new Crisp.Runtime.Nodes.ConditionNode(() => this.IsEnemyVisible),
-                new Crisp.Runtime.Nodes.ActionNode(() => this.Attack())),
-            new Crisp.Runtime.Nodes.ActionNode(() => this.Patrol()));
+                new Crisp.Runtime.Nodes.ConditionNode(() => this.IsEnemyVisible, ".IsEnemyVisible"),
+                new Crisp.Runtime.Nodes.ActionNode(() => this.Attack(), "Attack()")),
+            new Crisp.Runtime.Nodes.ActionNode(() => this.Patrol(), "Patrol()"));
     }
 }
 ```
@@ -475,6 +476,117 @@ public partial class NavigationAI
 - 以降のティック: 完了を確認し、未完了なら Running を返す
 - 完了時: `GetResult()` の結果（Success/Failure）を返す
 - 中断時: `CancellationToken` でキャンセルされる
+
+## チュートリアル 8: デバッガ
+
+ビヘイビアツリーの動作をデバッグするために、`BtDebugger` を使ってツリーの構造・実行状態・Blackboard 値のスナップショットを取得できます。
+
+### スナップショットの取得
+
+```csharp
+using Crisp.Runtime;
+using Crisp.Runtime.Debug;
+
+var ai = new EnemyAI { Health = 20, IsEnemyVisible = false };
+var tree = ai.BuildTree();
+
+// ツリーを実行
+var ctx = new TickContext(DeltaTime: 0.016f);
+tree.Tick(ctx);
+
+// デバッガでスナップショットを取得
+var debugger = new BtDebugger(tree);
+var snapshot = debugger.Capture();
+
+// テキスト形式で出力
+Console.WriteLine(BtDebugFormatter.Format(snapshot));
+```
+
+出力:
+
+```
+selector [Success]
++-- sequence [Success]
+|   +-- check ".Health < 30" [Success]
+|   \-- action "Flee()" [Success]
++-- sequence [-]
+|   +-- check ".IsEnemyVisible" [-]
+|   \-- action "Attack()" [-]
+\-- action "Patrol()" [-]
+```
+
+`[-]` は未評価のノードを示します。`selector` は最初に成功したブランチで評価を終了するため、2 番目以降のブランチは評価されていません。
+
+### Blackboard の状態を含める
+
+```csharp
+var blackboard = new WorldState { IsAlarmTriggered = true };
+var debugger = new BtDebugger(tree, blackboard);
+var snapshot = debugger.Capture();
+
+Console.WriteLine(BtDebugFormatter.Format(snapshot));
+```
+
+出力の末尾に Blackboard の状態が追加されます:
+
+```
+...（ツリー構造）...
+
+Blackboard (WorldState):
+  IsAlarmTriggered = True
+  GlobalThreatLevel = 0
+```
+
+### スナップショットをプログラムから利用
+
+`BtNodeSnapshot` を直接走査して、プログラムから状態を確認することもできます。
+
+```csharp
+var snapshot = debugger.Capture();
+
+// ルートノードの情報
+Console.WriteLine(snapshot.Root.NodeType);   // "selector"
+Console.WriteLine(snapshot.Root.LastStatus); // Success
+
+// 子ノードの走査
+foreach (var child in snapshot.Root.Children)
+{
+    Console.WriteLine($"{child.NodeType}: {child.LastStatus}");
+}
+
+// 特定のノードの状態確認
+var firstCheck = snapshot.Root.Children[0].Children[0];
+Console.WriteLine(firstCheck.Label);       // ".Health < 30"
+Console.WriteLine(firstCheck.LastStatus);  // Success
+```
+
+### LastStatus でノードの最新状態を確認
+
+各 `BtNode` は `LastStatus` プロパティで最後の `Tick` の結果を保持します。`Reset()` すると `null` にクリアされます。
+
+```csharp
+var node = new ActionNode(() => BtStatus.Running);
+
+Console.WriteLine(node.LastStatus);  // null（未評価）
+
+node.Tick(ctx);
+Console.WriteLine(node.LastStatus);  // Running
+
+node.Reset();
+Console.WriteLine(node.LastStatus);  // null（クリア済み）
+```
+
+### IDebugSink でリアルタイムトレース
+
+より詳細なデバッグ（ブレークポイント、ステップ実行、ノード評価のトレース）が必要な場合は、`IDebugSink` インターフェースを実装して `TickContext.Debug` に設定します。
+
+```csharp
+var debugSink = new MyDebugSink();
+var ctx = new TickContext(DeltaTime: 0.016f, Debug: debugSink);
+tree.Tick(ctx);
+```
+
+Source Generator はデバッグモード時に各ノードを `DebugProxyNode` でラップし、Tick の前後で `IDebugSink` のイベントを発火します。詳細は [ランタイム API](runtime-api.md#デバッガ-idebugsink) を参照してください。
 
 ## 外部ファイルの使い方
 
